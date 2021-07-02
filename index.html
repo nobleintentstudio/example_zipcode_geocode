@@ -1,0 +1,153 @@
+<html>
+<head>
+  <title>Zip Code To City/State with Google's Geocoding API</title>
+  <style>
+    html, * {
+      font-family: monospace;
+    }
+    label {
+      display: block;
+      margin-bottom: 2px;
+    }
+    input, select {
+      border: 2px solid black;
+      margin-bottom: 10px;
+      width: 200px;
+    }
+    select {
+      background: white;
+    }
+
+    form {
+      border: 2px solid black;
+      padding: 10px;
+      display: inline-block;
+    }
+    pre {
+      background: #e8e8e8;
+      padding: 10px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <h1>Zip Blur Demo:</h1>
+<form>
+  <label for="zip">Zip:</label>
+  <input id="zip" name="zip"/>
+  <label for="city">City:</label>
+  <div id="city-input-wrapper">
+    <input id="city" name="city"/>
+  </div>
+  <label for="state">State:</label>
+  <input id="state" name="state"/>
+</form>
+
+<p>Read More: <a href="https://nobleintentstudio.com/blog/zip-code-to-city-state-lookup/" target="_blank" rel="noopener">City & State Lookup with a Zip Code using Google's Geocoding API</a></p>
+
+<h2>Matching Localities</h2>
+<pre id="found-localities">waiting</pre>
+
+<h2>Geocode Response</h2>
+<pre id="raw-response">waiting</pre>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script>
+
+$('#zip').blur(function(){
+  var zip = $(this).val();
+  var api_key = 'AIzaSyD7GjBfTbfhSSjzHudXT5d2IYWwUO4yggc';
+
+  if(zip.length){
+    //make a request to the google geocode api with the zipcode as the address parameter and your api key
+    $.get('https://maps.googleapis.com/maps/api/geocode/json?address='+zip+'&key='+api_key).then(function(response){
+      //parse the response for a list of matching city/state
+      var possibleLocalities = geocodeResponseToCityState(response);
+      fillCityAndStateFields(possibleLocalities);
+
+      //demo only
+      fillInResults(possibleLocalities);
+      fillInRawResponse(response);
+
+    });
+  }
+ 
+});
+
+
+function fillCityAndStateFields(localities) {
+  var locality = localities[0]; //use the first city/state object
+
+  $('#city').val(locality.city);
+  $('#state').val(locality.state);
+
+  var $input;
+
+  if(localities.length > 1) {
+    var $select = $(document.createElement('select'));
+    for(var i = 0; i < localities.length; i++){
+      var city = localities[i].city;
+      var $option = $(document.createElement('option'));
+      $option.html(city);
+      $option.attr('value', city);
+      if(i == 0) {
+        $option.attr('selected','selected');
+      }
+      $select.append($option);
+      $select.attr('id','city');
+    }
+    $input = $select;
+  } else {
+    var city = localities[0].city;
+    var $text = $(document.createElement('input'));
+    $text.attr('value', city);
+    $text.attr('type','text');
+    $input = $text;
+  }
+
+  $('#city-input-wrapper').html($input);
+}
+
+function geocodeResponseToCityState(geocodeJSON) { //will return and array of matching {city,state} objects
+  var parsedLocalities = [];
+  if(geocodeJSON.results.length) {
+    for(var i = 0; i < geocodeJSON.results.length; i++){
+      var result = geocodeJSON.results[i];
+      
+      var locality = {};
+      for(var j=0; j<result.address_components.length; j++){
+        var types = result.address_components[j].types;
+        for(var k = 0; k < types.length; k++) {
+          if(types[k] == 'locality') {
+            locality.city = result.address_components[j].long_name;
+           } else if(types[k] == 'administrative_area_level_1') {
+            locality.state = result.address_components[j].short_name;
+           }
+        }
+      }
+      parsedLocalities.push(locality);
+
+      //check for additional cities within this zip code
+      if(result.postcode_localities){
+        for(var l = 0; l<result.postcode_localities.length;l++) {
+          parsedLocalities.push({city:result.postcode_localities[l],state:locality.state});
+        }
+      }
+    }
+  } else {
+    console.log('error: no address components found');
+  }
+  return parsedLocalities;
+}
+
+
+function fillInResults(response){
+  $('#found-localities').html(JSON.stringify(response));
+}
+function fillInRawResponse(response){
+  $('#raw-response').html(JSON.stringify(response, null, ' '));
+}
+</script>
+
+</body>
+</html>
