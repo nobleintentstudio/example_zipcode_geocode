@@ -33,7 +33,7 @@
 <body>
   <h1>Zip Blur Demo:</h1>
 <form>
-  <label for="zip">Zip:</label>
+  <label for="zip">Zip: <span class="loading"></span></label>
   <input id="zip" name="zip"/>
   <label for="city">City:</label>
   <div id="city-input-wrapper">
@@ -56,11 +56,12 @@
 
 $('#zip').blur(function(){
   var zip = $(this).val();
-  var api_key = 'AIzaSyD7GjBfTbfhSSjzHudXT5d2IYWwUO4yggc';
+  var api_key = 'YOUR_API_KEY';
+  $('.loading').text('loading...');
 
   if(zip.length){
     //make a request to the google geocode api with the zipcode as the address parameter and your api key
-    $.get('https://maps.googleapis.com/maps/api/geocode/json?address='+zip+'&key='+api_key).then(function(response){
+    $.get('https://geocodepassthru.glitch.me/?address='+zip+'&key='+api_key).then(function(response){
       //parse the response for a list of matching city/state
       var possibleLocalities = geocodeResponseToCityState(response);
       fillCityAndStateFields(possibleLocalities);
@@ -76,6 +77,8 @@ $('#zip').blur(function(){
 
 
 function fillCityAndStateFields(localities) {
+  $('.loading').text('');
+
   var locality = localities[0]; //use the first city/state object
 
   $('#city').val(locality.city);
